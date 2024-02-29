@@ -13,19 +13,28 @@
                                 v-model="address"
                                 id="autocomplete"
                             >
-                            <i class="dot circle link icon" @click="locatorButtonPressed"></i>
                         </div>
                     </div>
-                    <button class="ui button" @click="pushToDatabase">Go</button>
                 </div>
             </form>
+        <button class="ui button" id="open" @click="handleModal" style="z-index: 1;">Add</button>
         </div>
     </section>
-
+    <div class="modal_container" v-if="showModal">
+            <div class="modal">
+                <Details 
+                    v-if="showModal" 
+                    :detailsData="detailsData" 
+                    :selectedPlaceName="selectedPlaceName" 
+                    :favPlaces="favPlaces"
+                    @close-modal="hideModal" 
+                />
+            </div>
+        </div>
     <section id="map"></section>
     <section id="list">
         <div class="content">
-            <h1>Restaurants, Hotels <br> around you</h1>
+            <h1 class="list-title">Restaurants, Hotels <br> around you</h1>
             <div class="dropdown" >
                 <select id="type" v-model="type" @change="handleTypeChange" class="custom-dropdown">
                     <option value="restaurants">Restaurants</option>
@@ -41,6 +50,8 @@
                             <div class="address">{{ place.ADress }} </div>
                             <div class="phone">{{ place.phone }} </div> <br>
                             <div class="ranking">{{ place.ranking }} </div> <br>
+                            <div class="website" v-if="place.website"><a :href="place.website">website</a></div>
+                            <button @click="addToFavorites({name:place.name, address:place.ADress})">Add</button>
                         </div>
                 </div>
             </div>    
@@ -52,8 +63,8 @@
 
 <style>
 
+
 body {
-    background-color: #000;
     overflow: hidden;
 }
 
@@ -61,6 +72,25 @@ body {
 .dot.circle.icon {
     background-color: #ff5a5f;
     color: white;
+}
+
+.modal_container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  position: absolute;
+  top: 50%; /* Center vertically */
+  left: 50%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Center both horizontally and vertically */
+  width: 80vw; /* Adjust width as needed */
+  max-width: 700px; /* Set a maximum width */
+}
+
+.modal {
+  padding: 30px 50px;
+  width: 80vw; /* Adjust width as needed */
+  max-width: 100%;
 }
 
 
@@ -83,6 +113,31 @@ body {
     right: 0;
     bottom: 0;
     background-color: #ff5a5f;
+
+    .modal_container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%; /* Full width on small screens */
+  }
+
+  .modal {
+    width: 100%; /* Full width on small screens */
+  }
+
+  .card-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow cards to wrap on smaller screens */
+    justify-content: center;
+  }
+
+  .card {
+    margin: 0 10px 20px; /* Add some spacing between cards */
+  }
+
+  .list-title {
+    font-size: 10px;
+  }
   }
 }
 
@@ -179,19 +234,31 @@ body {
 
 <script>
 import axios from 'axios';
-import getPlaceData from '../api/suggest.js'
+import getPlaceData from '../api/suggest.js';
+import Details from './Details.vue';
+import { toRaw } from 'vue';
     export default {
+        components: {
+            Details,
+        },
         data() {
             return {
                 address: "",
                 type: '',
                 restaurants: [],
                 places: [],
+                selectedPlaceName:"",
+                showModal: false,
+                favPlaces: [],
+                pType:[],
+                detailsData: [],
+                pname: '',
+                place:'',
+                
             }
         },
         mounted() {
                 this.initSearch();
-
         },  
         methods: {
             locatorButtonPressed() {
@@ -237,6 +304,12 @@ import getPlaceData from '../api/suggest.js'
                     //console.log(inputValue);
                     // autocomplete
                     this.getAddressGeo(inputValue);
+                    
+                    this.selectedPlaceName = place.name
+
+                    console.log(this.selectedPlaceName);
+
+                    this.getData(place.name);
                 });
             },
             getAddressGeo(ad) {
@@ -251,7 +324,8 @@ import getPlaceData from '../api/suggest.js'
                         //console.log(bounds);
                         this.showUserLocationOnMap(location.lat, location.lng);
                         //console.log(`Latitude: ${location.lat}, Longitude: ${location.lng}`);
-                        
+                        this.detailsData.push(this.type);
+                        console.log(this.type);
                         this.fetchData(this.type, bounds.northeast, bounds.southwest);
                     };
                 })
@@ -283,6 +357,7 @@ import getPlaceData from '../api/suggest.js'
                         const filteredData = data.data.filter(place => place.name && place.name.trim() !== "");
 
                         const places = filteredData;
+                        
                         console.log(places);
 
                         // Clear the existing places before adding new ones
@@ -297,7 +372,8 @@ import getPlaceData from '../api/suggest.js'
                                 photo: place.photo
                                 ? place.photo.images.large.url
                                 : 'https://www.foodserviceandhospitality.com/wp-content/uploads/2016/09/Restaurant-Placeholder-001.jpg',
-                                ranking:place.ranking  
+                                ranking: place.ranking,
+                                website: place.website, 
                                 // Add other details you want to display
                             });
                         });
@@ -315,9 +391,27 @@ import getPlaceData from '../api/suggest.js'
             handleTypeChange(event) {
                 this.type = event.target.value;
             },
-            watch: {
-                type: 'handleTypeChange',
+            getData(name) {
+                this.modalData = name;
+
+                const details = {
+                    Name: name
+                };
+                console.log(details);
             },
+            handleModal() {
+                this.showModal = true
+                //this.detailsData = this.getData(this.address);
+            },
+
+            hideModal() {
+                this.showModal = false;
+            },
+            addToFavorites(place) {
+                this.favPlaces.push(place);
+                console.log(this.favPlaces);
+            },
+            
         },
 }
 </script>

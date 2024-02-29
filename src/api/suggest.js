@@ -1,4 +1,3 @@
-// suggest.js
 import axios from 'axios';
 
 const getPlaceData = async (type, sw, ne) => {
@@ -12,7 +11,7 @@ const getPlaceData = async (type, sw, ne) => {
         tr_longitude: ne.lng.toString(),
       },
       headers: {
-        'X-RapidAPI-Key': 'APi',
+        'X-RapidAPI-Key': 'API',
         'X-RapidAPI-Host': 'travel-advisor.p.rapidapi.com'
       }
     });
